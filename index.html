@@ -1,265 +1,58 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>To-Do</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f0f0f0;
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 400px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      overflow: hidden;
-    }
-
-    .header {
-      padding: 20px 20px 16px;
-      background: #fff;
-      border-bottom: 1px solid #e0e0e0;
-    }
-
-    .header h1 {
-      margin: 0;
-      font-size: 28px;
-      font-weight: 700;
-      color: #333;
-      text-transform: uppercase;
-    }
-
-    .date-time {
-      font-size: 14px;
-      color: #666;
-      margin-top: 4px;
-    }
-
-    ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    li {
-      padding: 12px 20px;
-      border-bottom: 1px solid #eee;
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-    }
-
-    .task-checkbox {
-      position: relative;
-      width: 20px;
-      height: 20px;
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-
-    .task-checkbox input {
-      opacity: 0;
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      cursor: pointer;
-      z-index: 2;
-    }
-
-    .task-checkbox span {
-      display: block;
-      width: 20px;
-      height: 20px;
-      border: 2px solid #ccc;
-      border-radius: 4px;
-      position: relative;
-      z-index: 1;
-      transition: all 0.2s;
-    }
-
-    /* ОРАНЖЕВЫЙ ЦВЕТ ДЛЯ ВЫПОЛНЕННОЙ ЗАДАЧИ */
-    .task-checkbox input:checked + span {
-      background: #FF9800; /* Оранжевый как на фото */
-      border-color: #FF9800;
-    }
-
-    .task-checkbox input:checked + span::after {
-      content: '';
-      position: absolute;
-      left: 5px;
-      top: 2px;
-      width: 6px;
-      height: 10px;
-      border: solid white;
-      border-width: 0 2px 2px 0;
-      transform: rotate(45deg);
-      z-index: 3;
-    }
-
-    .task-text {
-      flex: 1;
-      font-size: 16px;
-      color: #333;
-      line-height: 1.4;
-    }
-
-    .task-done .task-text {
-      text-decoration: line-through;
-      color: #999;
-    }
-
-    .new-task {
-      padding: 16px 20px;
-      background: #fff;
-      border-top: 1px solid #eee;
-    }
-
-    .new-task input {
-      width: 100%;
-      padding: 10px 12px;
-      font-size: 16px;
-      border: none;
-      border-radius: 8px;
-      background: #f5f5f5;
-      outline: none;
-      transition: background 0.2s;
-    }
-
-    .new-task input:focus {
-      background: #fff;
-      border: 1px solid #ddd;
-    }
-
-    .empty-state {
-      padding: 32px 20px;
-      text-align: center;
-      color: #999;
-      font-size: 16px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Задачи</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1 id="day-header">MONDAY</h1>
-      <div class="date-time" id="date-time">April 14, 2025 — 9:41am</div>
+    <div class="background"></div>
+    
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <h1 class="logo">Задачи</h1>
+                <div class="date" id="current-date"></div>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <input 
+                        type="text" 
+                        id="task-input" 
+                        placeholder="Новая задача..."
+                        autocomplete="off"
+                    >
+                    <button id="add-btn" class="add-btn">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="tasks-container">
+                <div id="loading" class="loading">
+                    <div class="loading-spinner"></div>
+                </div>
+                
+                <div id="empty-state" class="empty-state hidden">
+                    <div class="empty-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <p>Все задачи выполнены</p>
+                </div>
+
+                <ul id="tasks-list" class="tasks-list"></ul>
+            </div>
+        </main>
     </div>
 
-    <ul id="task-list">
-      <li class="loading">Загрузка задач...</li>
-    </ul>
+    <div id="toast" class="toast"></div>
 
-    <div class="new-task">
-      <input type="text" id="new-task" placeholder="Add a new task..." />
-    </div>
-  </div>
-
-  <script>
-    const API_URL = 'https://miniappsprouttodoapi.ru/task';
-    const taskList = document.getElementById('task-list');
-    const input = document.getElementById('new-task');
-    const dayHeader = document.getElementById('day-header');
-    const dateTime = document.getElementById('date-time');
-
-    // Обновляем заголовок и дату
-    function updateHeader() {
-      const now = new Date();
-      const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
-      const dayName = days[now.getDay()];
-      const dateStr = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-      const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-
-      dayHeader.textContent = dayName;
-      dateTime.textContent = `${dateStr} — ${timeStr}`;
-    }
-
-    updateHeader();
-
-    input.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') addTask();
-    });
-
-    async function loadTasks() {
-      try {
-        const res = await fetch(API_URL);
-        if (!res.ok) throw new Error('Ошибка загрузки');
-        const tasks = await res.json();
-
-        if (tasks.length === 0) {
-          taskList.innerHTML = '<li class="empty-state">Нет задач. Добавь первую!</li>';
-          return;
-        }
-
-        taskList.innerHTML = '';
-        tasks.forEach(task => {
-          const li = document.createElement('li');
-          if (task.done) li.classList.add('task-done');
-
-          const checkbox = document.createElement('div');
-          checkbox.className = 'task-checkbox';
-          checkbox.innerHTML = `
-            <input type="checkbox" ${task.done ? 'checked' : ''} />
-            <span></span>
-          `;
-          checkbox.onclick = () => toggleTask(task.id, !task.done);
-
-          const textDiv = document.createElement('div');
-          textDiv.className = 'task-text';
-          textDiv.textContent = task.name;
-
-          li.appendChild(checkbox);
-          li.appendChild(textDiv);
-
-          taskList.appendChild(li);
-        });
-      } catch (err) {
-        taskList.innerHTML = `<li class="empty-state" style="color:red">❌ ${err.message}</li>`;
-      }
-    }
-
-    async function addTask() {
-      const name = input.value.trim();
-      if (!name) return;
-
-      try {
-        const res = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name })
-        });
-        if (!res.ok) throw new Error('Не удалось создать задачу');
-        input.value = '';
-        loadTasks(); // обновить список
-      } catch (err) {
-        alert('Ошибка: ' + err.message);
-      }
-    }
-
-    async function toggleTask(id, done) {
-      try {
-        const res = await fetch(`${API_URL}/${id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ done })
-        });
-        if (!res.ok) throw new Error('Не удалось обновить задачу');
-        loadTasks(); // обновить весь список
-      } catch (err) {
-        alert('Ошибка: ' + err.message);
-      }
-    }
-
-    // Загрузить задачи при старте
-    loadTasks();
-  </script>
+    <script src="script.js"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 class TaskManager {
     constructor() {
-        this.API_URL = 'http://localhost:8080/task';
+        this.API_URL = 'https://miniappsprouttodoapi.ru/task';
         this.tasks = [];
         this.init();
     }

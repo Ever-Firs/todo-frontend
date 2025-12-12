@@ -12,43 +12,128 @@
     <div class="background"></div>
     
     <div class="container">
-        <header class="header">
-            <div class="header-content">
-                <h1 class="logo">Задачи</h1>
-                <div class="date" id="current-date"></div>
-            </div>
-        </header>
-
-        <main class="main">
-            <div class="input-container">
-                <div class="input-wrapper">
-                    <input 
-                        type="text" 
-                        id="task-input" 
-                        placeholder="Новая задача..."
-                        autocomplete="off"
-                    >
-                    <button id="add-btn" class="add-btn">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="tasks-container">
-                <div id="loading" class="loading">
-                    <div class="loading-spinner"></div>
+        <!-- Экран авторизации -->
+        <div id="auth-screen" class="auth-screen">
+            <div class="auth-card">
+                <h1 class="auth-logo">Задачи</h1>
+                <p class="auth-subtitle">Минималистичный менеджер задач</p>
+                
+                <div class="tabs">
+                    <button class="tab active" data-tab="login">Вход</button>
+                    <button class="tab" data-tab="register">Регистрация</button>
                 </div>
                 
-                <div id="empty-state" class="empty-state hidden">
-                    <div class="empty-icon">
-                        <i class="fas fa-check-circle"></i>
+                <!-- Форма входа -->
+                <form id="login-form" class="auth-form">
+                    <div class="form-group">
+                        <label for="login-username">Имя пользователя</label>
+                        <input 
+                            type="text" 
+                            id="login-username" 
+                            placeholder="Введите имя пользователя"
+                            required
+                            value="test"
+                        >
                     </div>
-                    <p>Все задачи выполнены</p>
+                    <div class="form-group">
+                        <label for="login-password">Пароль</label>
+                        <input 
+                            type="password" 
+                            id="login-password" 
+                            placeholder="Введите пароль"
+                            required
+                            value="test"
+                        >
+                    </div>
+                    <button type="submit" class="auth-btn">
+                        <i class="fas fa-sign-in-alt"></i>
+                        Войти
+                    </button>
+                </form>
+                
+                <!-- Форма регистрации -->
+                <form id="register-form" class="auth-form hidden">
+                    <div class="form-group">
+                        <label for="register-username">Имя пользователя</label>
+                        <input 
+                            type="text" 
+                            id="register-username" 
+                            placeholder="Придумайте имя пользователя"
+                            required
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password">Пароль</label>
+                        <input 
+                            type="password" 
+                            id="register-password" 
+                            placeholder="Придумайте пароль"
+                            required
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm-password">Подтвердите пароль</label>
+                        <input 
+                            type="password" 
+                            id="confirm-password" 
+                            placeholder="Повторите пароль"
+                            required
+                        >
+                    </div>
+                    <button type="submit" class="auth-btn">
+                        <i class="fas fa-user-plus"></i>
+                        Зарегистрироваться
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Основной экран -->
+        <div id="main-screen" class="main-screen hidden">
+            <header class="header">
+                <div class="header-content">
+                    <div class="user-info">
+                        <h1 class="logo">Задачи</h1>
+                        <div class="user" id="current-user"></div>
+                    </div>
+                    <button id="logout-btn" class="logout-btn" title="Выйти">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+                <div class="date" id="current-date"></div>
+            </header>
+
+            <main class="main">
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <input 
+                            type="text" 
+                            id="task-input" 
+                            placeholder="Новая задача..."
+                            autocomplete="off"
+                        >
+                        <button id="add-btn" class="add-btn">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
                 </div>
 
-                <ul id="tasks-list" class="tasks-list"></ul>
-            </div>
-        </main>
+                <div class="tasks-container">
+                    <div id="loading" class="loading">
+                        <div class="loading-spinner"></div>
+                    </div>
+                    
+                    <div id="empty-state" class="empty-state hidden">
+                        <div class="empty-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <p>Все задачи выполнены</p>
+                    </div>
+
+                    <ul id="tasks-list" class="tasks-list"></ul>
+                </div>
+            </main>
+        </div>
     </div>
 
     <div id="toast" class="toast"></div>

@@ -1,6 +1,6 @@
 class AuthManager {
     constructor() {
-        this.API_URL = 'https://miniappsprouttodoapi.ru/task';
+        this.API_URL = 'https://miniappsprouttodoapi.ru';
         this.token = localStorage.getItem('token');
         this.username = localStorage.getItem('username');
         this.init();
@@ -12,28 +12,21 @@ class AuthManager {
     }
 
     bindEvents() {
-        // Переключение между вкладками
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', (e) => this.switchTab(e.target.dataset.tab));
         });
 
-        // Форма входа
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             await this.login();
         });
 
-        // Форма регистрации
         document.getElementById('register-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             await this.register();
         });
 
-        // Кнопка выхода
-        const logoutBtn = document.getElementById('logout-btn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => this.logout());
-        }
+        document.getElementById('logout-btn').addEventListener('click', () => this.logout());
     }
 
     async login() {
@@ -46,24 +39,32 @@ class AuthManager {
         }
 
         try {
-            console.log('Отправка запроса на вход...');
+            console.log('🔄 Отправка запроса на вход...');
             const response = await fetch(`${this.API_URL}/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify({ username, password })
             });
 
-            console.log('Статус ответа:', response.status);
+            console.log('📊 Статус ответа:', response.status);
+            console.log('📝 Заголовки ответа:', Object.fromEntries([...response.headers.entries()]));
             
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Ошибка входа');
+                let errorText = 'Ошибка входа';
+                try {
+                    const errorData = await response.json();
+                    errorText = errorData.message || errorText;
+                } catch (e) {
+                    errorText = await response.text();
+                }
+                throw new Error(errorText);
             }
 
             const data = await response.json();
-            console.log('Получены данные:', data);
+            console.log('✅ Получены данные:', data);
 
             if (!data.token) {
                 throw new Error('Токен не получен');
@@ -78,11 +79,11 @@ class AuthManager {
             this.showMainScreen();
             this.showToast('Вход выполнен успешно');
             
-            // Инициализируем TaskManager
-            window.taskManager = new TaskManager(this.token);
+            // Перезагружаем страницу для создания нового TaskManager
+            location.reload();
             
         } catch (error) {
-            console.error('Ошибка входа:', error);
+            console.error('❌ Ошибка входа:', error);
             this.showToast(error.message || 'Ошибка входа', 'error');
         }
     }
@@ -108,34 +109,40 @@ class AuthManager {
         }
 
         try {
-            console.log('Отправка запроса на регистрацию...');
+            console.log('🔄 Отправка запроса на регистрацию...');
             const response = await fetch(`${this.API_URL}/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify({ username, password })
             });
 
-            console.log('Статус ответа:', response.status);
+            console.log('📊 Статус ответа:', response.status);
             
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Ошибка регистрации');
+                let errorText = 'Ошибка регистрации';
+                try {
+                    const errorData = await response.json();
+                    errorText = errorData.message || errorText;
+                } catch (e) {
+                    errorText = await response.text();
+                }
+                throw new Error(errorText);
             }
 
             const data = await response.json();
-            console.log('Регистрация успешна:', data);
+            console.log('✅ Регистрация успешна:', data);
 
             this.showToast('Регистрация успешна! Теперь войдите в систему');
             this.switchTab('login');
             
-            // Автозаполнение формы входа
             document.getElementById('login-username').value = username;
             document.getElementById('login-password').value = password;
             
         } catch (error) {
-            console.error('Ошибка регистрации:', error);
+            console.error('❌ Ошибка регистрации:', error);
             this.showToast(error.message || 'Ошибка регистрации', 'error');
         }
     }
@@ -159,7 +166,10 @@ class AuthManager {
     checkAuth() {
         if (this.token && this.username) {
             this.showMainScreen();
-            window.taskManager = new TaskManager(this.token);
+            // Создаем TaskManager асинхронно
+            setTimeout(() => {
+                window.taskManager = new TaskManager(this.token);
+            }, 100);
         } else {
             this.showAuthScreen();
         }
@@ -210,11 +220,11 @@ class TaskManager {
         this.API_URL = 'http://localhost:8080/task';
         this.token = token;
         this.tasks = [];
+        console.log('🚀 TaskManager инициализирован с токеном:', this.token);
         this.init();
     }
 
     async init() {
-        console.log('TaskManager инициализирован с токеном:', this.token);
         this.bindEvents();
         await this.loadTasks();
         this.setupTelegram();
@@ -232,13 +242,6 @@ class TaskManager {
                 if (e.key === 'Enter') this.addTask();
             });
         }
-
-        // Скрыть клавиатуру при клике вне поля ввода
-        document.addEventListener('click', (e) => {
-            if (taskInput && e.target.id !== 'task-input') {
-                taskInput.blur();
-            }
-        });
     }
 
     setupTelegram() {
@@ -256,41 +259,71 @@ class TaskManager {
         }
     }
 
+    async fetchWithAuth(url, options = {}) {
+        const defaultOptions = {
+            headers: {
+                'Authorization': `Bearer ${this.token}`,
+                'Accept': 'application/json'
+            },
+            mode: 'cors',
+            credentials: 'omit'
+        };
+
+        if (options.method && options.method !== 'GET' && options.method !== 'DELETE') {
+            defaultOptions.headers['Content-Type'] = 'application/json';
+        }
+
+        const finalOptions = { ...defaultOptions, ...options };
+        
+        console.log('📤 Отправка запроса:', {
+            url,
+            method: finalOptions.method || 'GET',
+            headers: finalOptions.headers,
+            body: finalOptions.body
+        });
+
+        const response = await fetch(url, finalOptions);
+        
+        console.log('📥 Получен ответ:', {
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries([...response.headers.entries()])
+        });
+
+        return response;
+    }
+
     async loadTasks() {
         try {
-            console.log('Загрузка задач...');
+            console.log('🔄 Загрузка задач...');
             this.showLoading();
             
-            const response = await fetch(this.API_URL, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${this.token}`,
-                },
+            const response = await this.fetchWithAuth(this.API_URL, {
+                method: 'GET'
             });
 
-            console.log('Статус загрузки задач:', response.status);
-            
             if (response.status === 401) {
-                console.log('Токен недействителен, выход из системы');
-                window.authManager.logout();
-                this.showToast('Сессия истекла, войдите снова', 'error');
+                console.log('🔒 Токен недействителен, выход из системы');
+                localStorage.removeItem('token');
+                localStorage.removeItem('username');
+                location.reload();
                 return;
             }
             
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Ошибка загрузки задач:', errorText);
+                let errorText = await response.text();
+                console.error('❌ Ошибка загрузки задач:', errorText);
                 throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
             
             const tasks = await response.json();
-            console.log('Задачи загружены:', tasks);
+            console.log('✅ Задачи загружены:', tasks);
             
             this.tasks = tasks;
             this.renderTasks();
             
         } catch (error) {
-            console.error('Ошибка загрузки задач:', error);
+            console.error('❌ Ошибка загрузки задач:', error);
             this.showToast('Ошибка загрузки задач', 'error');
         } finally {
             this.hideLoading();
@@ -310,70 +343,61 @@ class TaskManager {
         }
 
         try {
-            console.log('Добавление задачи:', taskName);
+            console.log('🔄 Добавление задачи:', taskName);
             
-            const response = await fetch(this.API_URL, {
+            const response = await this.fetchWithAuth(this.API_URL, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.token}`,
-                },
                 body: JSON.stringify({ name: taskName })
             });
 
-            console.log('Статус добавления задачи:', response.status);
-            
             if (response.status === 401) {
-                window.authManager.logout();
-                this.showToast('Сессия истекла, войдите снова', 'error');
+                localStorage.removeItem('token');
+                localStorage.removeItem('username');
+                location.reload();
                 return;
             }
             
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Ошибка добавления задачи:', errorText);
+                let errorText = await response.text();
+                console.error('❌ Ошибка добавления задачи:', errorText);
                 throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
             
             const newTask = await response.json();
-            console.log('Задача добавлена:', newTask);
+            console.log('✅ Задача добавлена:', newTask);
             
             this.tasks.unshift(newTask);
             this.renderTasks();
             
             input.value = '';
+            input.focus();
             this.showToast('Задача добавлена');
             
         } catch (error) {
-            console.error('Ошибка добавления задачи:', error);
+            console.error('❌ Ошибка добавления задачи:', error);
             this.showToast('Ошибка добавления задачи', 'error');
         }
     }
 
     async updateTaskStatus(taskId, done) {
         try {
-            console.log(`Обновление задачи ${taskId}: done=${done}`);
+            console.log(`🔄 Обновление задачи ${taskId}: done=${done}`);
             
-            const response = await fetch(`${this.API_URL}/${taskId}`, {
+            const response = await this.fetchWithAuth(`${this.API_URL}/${taskId}`, {
                 method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.token}`,
-                },
                 body: JSON.stringify({ done })
             });
 
-            console.log('Статус обновления задачи:', response.status);
-            
             if (response.status === 401) {
-                window.authManager.logout();
-                this.showToast('Сессия истекла, войдите снова', 'error');
+                localStorage.removeItem('token');
+                localStorage.removeItem('username');
+                location.reload();
                 return;
             }
             
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Ошибка обновления задачи:', errorText);
+                let errorText = await response.text();
+                console.error('❌ Ошибка обновления задачи:', errorText);
                 throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
             
@@ -387,7 +411,7 @@ class TaskManager {
             this.showToast('Задача обновлена');
             
         } catch (error) {
-            console.error('Ошибка обновления задачи:', error);
+            console.error('❌ Ошибка обновления задачи:', error);
             this.showToast('Ошибка обновления задачи', 'error');
         }
     }
@@ -396,26 +420,22 @@ class TaskManager {
         if (!confirm('Удалить эту задачу?')) return;
         
         try {
-            console.log(`Удаление задачи ${taskId}`);
+            console.log(`🔄 Удаление задачи ${taskId}`);
             
-            const response = await fetch(`${this.API_URL}/${taskId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${this.token}`,
-                },
+            const response = await this.fetchWithAuth(`${this.API_URL}/${taskId}`, {
+                method: 'DELETE'
             });
 
-            console.log('Статус удаления задачи:', response.status);
-            
             if (response.status === 401) {
-                window.authManager.logout();
-                this.showToast('Сессия истекла, войдите снова', 'error');
+                localStorage.removeItem('token');
+                localStorage.removeItem('username');
+                location.reload();
                 return;
             }
             
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Ошибка удаления задачи:', errorText);
+                let errorText = await response.text();
+                console.error('❌ Ошибка удаления задачи:', errorText);
                 throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
             
@@ -424,7 +444,7 @@ class TaskManager {
             this.showToast('Задача удалена');
             
         } catch (error) {
-            console.error('Ошибка удаления задачи:', error);
+            console.error('❌ Ошибка удаления задачи:', error);
             this.showToast('Ошибка удаления задачи', 'error');
         }
     }
@@ -433,9 +453,11 @@ class TaskManager {
         const tasksList = document.getElementById('tasks-list');
         const emptyState = document.getElementById('empty-state');
         
-        if (!tasksList || !emptyState) return;
+        if (!tasksList || !emptyState) {
+            console.error('❌ Не найдены элементы для отображения задач');
+            return;
+        }
         
-        // Сортировка: сначала активные, потом выполненные
         const sortedTasks = [...this.tasks].sort((a, b) => {
             if (a.done === b.done) {
                 return new Date(b.created_at) - new Date(a.created_at);
@@ -450,7 +472,6 @@ class TaskManager {
             emptyState.classList.add('hidden');
             tasksList.innerHTML = sortedTasks.map(task => this.createTaskElement(task)).join('');
             
-            // Добавляем обработчики событий
             sortedTasks.forEach(task => {
                 const taskElement = document.querySelector(`[data-task-id="${task.id}"]`);
                 if (taskElement) {
@@ -544,6 +565,48 @@ class TaskManager {
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Документ загружен, инициализация...');
-    window.authManager = new AuthManager();
+    console.log('🚀 Документ загружен, инициализация...');
+    
+    // Проверяем, есть ли токен в localStorage
+    const token = localStorage.getItem('token');
+    const username = localStorage.getItem('username');
+    
+    if (token && username) {
+        console.log('🔑 Найден токен в localStorage, создаем TaskManager');
+        window.taskManager = new TaskManager(token);
+    } else {
+        console.log('🔒 Токен не найден, показываем экран авторизации');
+        window.authManager = new AuthManager();
+    }
 });
+
+// Глобальная функция для тестирования
+window.testApi = async function() {
+    console.log('🧪 Тестирование API...');
+    
+    // Тест регистрации
+    try {
+        const registerRes = await fetch('http://localhost:8080/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'test', password: 'test' })
+        });
+        console.log('Регистрация:', await registerRes.text());
+    } catch (e) {}
+    
+    // Тест входа
+    const loginRes = await fetch('http://localhost:8080/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: 'test', password: 'test' })
+    });
+    const loginData = await loginRes.json();
+    console.log('Вход:', loginData);
+    
+    // Тест получения задач
+    const tasksRes = await fetch('http://localhost:8080/task', {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${loginData.token}` }
+    });
+    console.log('Задачи:', await tasksRes.json());
+};
